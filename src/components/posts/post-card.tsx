@@ -6,7 +6,6 @@ import { AiOutlineEye } from 'react-icons/ai';
 
 import CategoryList from '@/components/category-list';
 import FavoriteButton from '@/components/favorite-button';
-import useInView from '@/hooks/use-in-view';
 import { Post } from '@/types/post';
 
 const STATUS_STYLES: Record<string, string> = {
@@ -25,16 +24,8 @@ export default function PostCard({
 }: {
   post: Post;
 }) {
-  const { ref, isInView } = useInView<HTMLAnchorElement>();
-
   return (
-    <Link
-      ref={ref}
-      href={`/trangchu/${slug}`}
-      className={`block h-full transition-all duration-700 ease-out ${
-        isInView ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
-      }`}
-    >
+    <Link href={`/trangchu/${slug}`} className="block h-full">
       <article className="group flex h-full flex-col overflow-hidden rounded-xl shadow-[0_4px_16px_-4px_rgba(0,0,0,0.2)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_28px_-6px_rgba(0,0,0,0.3)] dark:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.5)] dark:hover:shadow-[0_10px_28px_-6px_rgba(0,0,0,0.65)]">
         <div className="relative aspect-[3/4] shrink-0 overflow-hidden sm:aspect-video">
           <Image
