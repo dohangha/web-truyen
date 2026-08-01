@@ -4,14 +4,18 @@ import { getRecordMap, mapImageUrl } from '@/libs/notion';
 import { Post } from '@/types/post';
 import { getBlurImage } from '@/utils/get-blur-image';
 
-// cache() giúp nhiều nơi gọi hàm này trong CÙNG 1 lần tải trang (ví dụ vừa
-// cần cho metadata, vừa cần cho nội dung) chỉ thực sự gọi Notion API 1 lần,
-// dùng lại kết quả thay vì gọi lặp lại nhiều lần.
+// cache() giúp nhiều nơi gọi hàm này trong CÙNG 1 lần tải trang chỉ thực sự
+// gọi Notion API 1 lần, dùng lại kết quả thay vì gọi lặp lại nhiều lần.
 export const getAllPostsFromNotion = cache(async () => {
   const allPosts: Post[] = [];
   const recordMap = await getRecordMap(process.env.NOTION_DATABASE_ID!);
   const { block, collection } = recordMap;
-  const schema = Object.values(collection)[0].value.value.schema;
+
+  // Ghi chú: định nghĩa kiểu dữ liệu (types) của thư viện notion-client chưa
+  // được cập nhật khớp với cấu trúc API thực tế (có thêm 1 lớp .value lồng
+  // nhau) -> cần "as any" ở các chỗ truy cập .value.value để bỏ qua kiểm
+  // tra kiểu tĩnh, dữ liệu thực tế vẫn đúng khi chạy.
+  const schema = (Object.values(collection)[0] as any).value.value.schema;
   const propertyMap: Record<string, string> = {};
 
   Object.keys(schema).forEach((key) => {
@@ -19,7 +23,7 @@ export const getAllPostsFromNotion = cache(async () => {
   });
 
   Object.keys(block).forEach((pageId) => {
-    const blockValue = block[pageId]?.value?.value;
+    const blockValue = (block[pageId] as any)?.value?.value;
 
     if (
       blockValue &&
@@ -29,11 +33,11 @@ export const getAllPostsFromNotion = cache(async () => {
       const { properties, last_edited_time } = blockValue;
 
       const contents = blockValue.content || [];
-      const dates = contents.map((content) => {
-        return block[content]?.value?.value?.last_edited_time;
+      const dates = contents.map((content: string) => {
+        return (block[content] as any)?.value?.value?.last_edited_time;
       });
       dates.push(last_edited_time);
-      dates.sort((a, b) => b - a);
+      dates.sort((a: number, b: number) => b - a);
       const lastEditedAt = dates[0];
 
       const id = pageId;

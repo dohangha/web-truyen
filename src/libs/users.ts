@@ -21,9 +21,9 @@ async function readUsers(): Promise<User[]> {
     const raw = await fs.readFile(USERS_FILE, 'utf-8');
     const users = JSON.parse(raw);
     return users.map((u: User) => ({
-      favorites: [],
-      provider: 'email',
       ...u,
+      favorites: u.favorites ?? [],
+      provider: u.provider ?? 'email',
     }));
   } catch {
     return [];
