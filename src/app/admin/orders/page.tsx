@@ -108,9 +108,8 @@ export default function AdminOrdersPage() {
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">Đơn Nâng Cấp VIP Đang Chờ</h1>
         <p className="text-secondary text-sm">
-          Tự động làm mới mỗi 5 giây. Kiểm tra app ngân hàng, nếu thấy đúng
-          mã đơn hàng trong nội dung chuyển khoản, bấm
-          {' '}<strong>&quot;Xác nhận đã nhận tiền&quot;</strong>.
+          Tự động làm mới mỗi 5 giây. Kiểm tra app ngân hàng, nếu thấy đúng mã đơn hàng trong nội dung chuyển khoản, bấm{' '}
+          <strong>&quot;Xác nhận đã nhận tiền&quot;</strong>.
         </p>
 
         {orders.length === 0 && (
