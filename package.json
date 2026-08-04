@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@plaiceholder/next": "^3.0.0",
+    "@supabase/supabase-js": "^2.112.0",
     "axios": "^1.4.0",
     "bcryptjs": "^3.0.3",
     "encoding": "^0.1.13",

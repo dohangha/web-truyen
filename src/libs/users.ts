@@ -1,12 +1,12 @@
-import { promises as fs } from 'fs';
-import path from 'path';
 import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
+
+import { supabase } from '@/libs/supabase';
 
 export interface User {
   id: string;
   email: string;
-  passwordHash?: string; // không có nếu đăng nhập qua Google/Facebook
+  passwordHash?: string;
   avatarUrl?: string;
   provider: 'email' | 'google' | 'facebook';
   isVip: boolean;
@@ -14,137 +14,159 @@ export interface User {
   createdAt: number;
 }
 
-const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
-
-async function readUsers(): Promise<User[]> {
-  try {
-    const raw = await fs.readFile(USERS_FILE, 'utf-8');
-    const users = JSON.parse(raw);
-    return users.map((u: User) => ({
-      ...u,
-      favorites: u.favorites ?? [],
-      provider: u.provider ?? 'email',
-    }));
-  } catch {
-    return [];
-  }
-}
-
-async function writeUsers(users: User[]) {
-  await fs.mkdir(path.dirname(USERS_FILE), { recursive: true });
-  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+// Chuyển đổi row từ Supabase (snake_case) sang User (camelCase)
+function mapRow(row: any): User {
+  return {
+    id: row.id,
+    email: row.email,
+    passwordHash: row.password_hash ?? undefined,
+    avatarUrl: row.avatar_url ?? undefined,
+    provider: row.provider,
+    isVip: row.is_vip,
+    favorites: row.favorites ?? [],
+    createdAt: new Date(row.created_at).getTime(),
+  };
 }
 
 export async function createUser(
   email: string,
   password: string
 ): Promise<User | null> {
-  const users = await readUsers();
   const normalizedEmail = email.trim().toLowerCase();
 
-  if (users.some((u) => u.email === normalizedEmail)) {
-    return null;
-  }
+  const { data: existing } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', normalizedEmail)
+    .maybeSingle();
+
+  if (existing) return null;
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const user: User = {
-    id: randomUUID(),
-    email: normalizedEmail,
-    passwordHash,
-    provider: 'email',
-    isVip: false,
-    favorites: [],
-    createdAt: Date.now(),
-  };
+  const { data, error } = await supabase
+    .from('users')
+    .insert({
+      id: randomUUID(),
+      email: normalizedEmail,
+      password_hash: passwordHash,
+      provider: 'email',
+      is_vip: false,
+      favorites: [],
+    })
+    .select()
+    .single();
 
-  users.push(user);
-  await writeUsers(users);
+  if (error || !data) return null;
 
-  return user;
+  return mapRow(data);
 }
 
 export async function verifyPassword(
   email: string,
   password: string
 ): Promise<User | null> {
-  const users = await readUsers();
-  const user = users.find((u) => u.email === email.trim().toLowerCase());
+  const { data } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email.trim().toLowerCase())
+    .maybeSingle();
 
-  if (!user || !user.passwordHash) return null;
+  if (!data || !data.password_hash) return null;
 
-  const isMatch = await bcrypt.compare(password, user.passwordHash);
-  return isMatch ? user : null;
+  const isMatch = await bcrypt.compare(password, data.password_hash);
+  return isMatch ? mapRow(data) : null;
 }
 
-// Đăng nhập qua Google/Facebook: tìm tài khoản theo email, nếu chưa có thì tạo mới
 export async function findOrCreateOAuthUser(
   email: string,
   avatarUrl: string | undefined,
   provider: 'google' | 'facebook'
 ): Promise<User> {
-  const users = await readUsers();
   const normalizedEmail = email.trim().toLowerCase();
 
-  const existing = users.find((u) => u.email === normalizedEmail);
-  if (existing) return existing;
+  const { data: existing } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', normalizedEmail)
+    .maybeSingle();
 
-  const user: User = {
-    id: randomUUID(),
-    email: normalizedEmail,
-    avatarUrl,
-    provider,
-    isVip: false,
-    favorites: [],
-    createdAt: Date.now(),
-  };
+  if (existing) return mapRow(existing);
 
-  users.push(user);
-  await writeUsers(users);
+  const { data, error } = await supabase
+    .from('users')
+    .insert({
+      id: randomUUID(),
+      email: normalizedEmail,
+      avatar_url: avatarUrl,
+      provider,
+      is_vip: false,
+      favorites: [],
+    })
+    .select()
+    .single();
 
-  return user;
+  if (error || !data) {
+    throw new Error(`Failed to create OAuth user: ${error?.message}`);
+  }
+
+  return mapRow(data);
 }
 
 export async function getUserById(id: string): Promise<User | undefined> {
-  const users = await readUsers();
-  return users.find((u) => u.id === id);
+  const { data } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  return data ? mapRow(data) : undefined;
 }
 
 export async function setUserVip(id: string): Promise<void> {
-  const users = await readUsers();
-  const user = users.find((u) => u.id === id);
-  if (user) {
-    user.isVip = true;
-    await writeUsers(users);
-  }
+  await supabase.from('users').update({ is_vip: true }).eq('id', id);
 }
 
 export async function toggleFavorite(
   userId: string,
   slug: string
 ): Promise<string[] | null> {
-  const users = await readUsers();
-  const user = users.find((u) => u.id === userId);
+  const { data: user } = await supabase
+    .from('users')
+    .select('favorites')
+    .eq('id', userId)
+    .maybeSingle();
 
   if (!user) return null;
 
-  if (user.favorites.includes(slug)) {
-    user.favorites = user.favorites.filter((s) => s !== slug);
-  } else {
-    user.favorites.push(slug);
-  }
+  const favorites: string[] = user.favorites ?? [];
+  const newFavorites = favorites.includes(slug)
+    ? favorites.filter((s) => s !== slug)
+    : [...favorites, slug];
 
-  await writeUsers(users);
-  return user.favorites;
+  await supabase
+    .from('users')
+    .update({ favorites: newFavorites })
+    .eq('id', userId);
+
+  return newFavorites;
 }
 
 export async function getStats(): Promise<{
   totalUsers: number;
   totalVip: number;
 }> {
-  const users = await readUsers();
+  const { count: totalUsers } = await supabase
+    .from('users')
+    .select('*', { count: 'exact', head: true });
+
+  const { count: totalVip } = await supabase
+    .from('users')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_vip', true);
+
   return {
-    totalUsers: users.length,
-    totalVip: users.filter((u) => u.isVip).length,
+    totalUsers: totalUsers ?? 0,
+    totalVip: totalVip ?? 0,
   };
 }
