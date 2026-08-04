@@ -36,6 +36,18 @@ export default function Footer() {
             Liên Hệ
           </Link>
           <Link
+            href="/chinh-sach-bao-mat"
+            className="hover:text-primary transition-colors duration-300"
+          >
+            Chính Sách Bảo Mật
+          </Link>
+          <Link
+            href="/dieu-khoan-su-dung"
+            className="hover:text-primary transition-colors duration-300"
+          >
+            Điều Khoản Sử Dụng
+          </Link>
+          <Link
             href="/tai-khoan"
             className="hover:text-primary text-amber-600 transition-colors duration-300 dark:text-amber-400"
           >
