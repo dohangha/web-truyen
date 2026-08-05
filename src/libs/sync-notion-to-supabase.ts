@@ -123,6 +123,7 @@ async function uploadCoverToStorage(
 
 export type SyncResult = {
   synced: number;
+  skipped: number;
   failed: { slug: string; error: string }[];
 };
 
@@ -146,13 +147,36 @@ export async function syncNotionToSupabase(): Promise<SyncResult> {
     cursor = response.has_more ? response.next_cursor ?? undefined : undefined;
   } while (cursor);
 
+  // Lấy trước thời gian sửa đổi gần nhất đã lưu trong Supabase, để biết
+  // truyện nào thực sự cần đồng bộ lại (mới hoặc vừa sửa), truyện nào có
+  // thể bỏ qua -> đồng bộ nhanh hơn nhiều khi thư viện lớn dần.
+  const { data: existingRows, error: existingError } = await supabase
+    .from('posts')
+    .select('id, last_edited_at');
+
+  if (existingError) throw existingError;
+
+  const existingMap = new Map(
+    (existingRows ?? []).map((row) => [row.id, row.last_edited_at])
+  );
+
   const failed: { slug: string; error: string }[] = [];
   let synced = 0;
+  let skipped = 0;
 
   // Đồng bộ tuần tự (không song song) để tránh vượt rate limit của Notion
   // (khoảng 3 request/giây) trong lúc đồng bộ nhiều truyện cùng lúc.
   for (const page of allPages) {
     const slug = getRichText(page, 'Slug');
+    const lastEditedAt = new Date(page.last_edited_time).getTime();
+    const existingLastEditedAt = existingMap.get(page.id);
+
+    // Truyện chưa đổi kể từ lần đồng bộ trước -> bỏ qua, không tải ảnh/nội
+    // dung lại, giúp đồng bộ nhanh dù đăng nhiều truyện mới cùng lúc.
+    if (existingLastEditedAt === lastEditedAt) {
+      skipped++;
+      continue;
+    }
 
     try {
       const rawCover = getCoverUrl(page);
@@ -172,7 +196,7 @@ export async function syncNotionToSupabase(): Promise<SyncResult> {
         blur_url: blurUrl,
         date: '',
         published: getCheckbox(page, 'Published'),
-        last_edited_at: new Date(page.last_edited_time).getTime(),
+        last_edited_at: lastEditedAt,
         views: getNumber(page, 'Lượt Xem'),
         status: getSelect(page, 'Trạng Thái'),
         access: getSelect(page, 'Truy Cập'),
@@ -191,5 +215,5 @@ export async function syncNotionToSupabase(): Promise<SyncResult> {
     }
   }
 
-  return { synced, failed };
+  return { synced, skipped, failed };
 }
