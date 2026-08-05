@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync-notion?secret=Dohangha123*",
+      "schedule": "*/30 * * * *"
+    }
+  ]
+}

@@ -8,7 +8,7 @@ import CommentSection from '@/components/comment-section';
 import RelatedPosts from '@/components/posts/related-posts';
 import VipLockScreen from '@/components/vip-lock-screen';
 import { getCurrentUser } from '@/libs/auth-helpers';
-import { getPageBlocksV2 } from '@/libs/notion-official';
+import { supabase } from '@/libs/supabase';
 import { getAllPostsFromNotion } from '@/services/posts';
 import { Post } from '@/types/post';
 
@@ -33,7 +33,7 @@ export default async function PostPage({
   try {
     allPosts = await getAllPostsFromNotion();
   } catch (error) {
-    console.error('PostPage: failed to fetch posts from Notion', error);
+    console.error('PostPage: failed to fetch posts', error);
     return <LoadErrorFallback />;
   }
 
@@ -130,9 +130,16 @@ export default async function PostPage({
   let blocks;
 
   try {
-    blocks = await getPageBlocksV2(post.id);
+    const { data, error } = await supabase
+      .from('posts')
+      .select('content')
+      .eq('id', post.id)
+      .single();
+
+    if (error) throw error;
+    blocks = data.content;
   } catch (error) {
-    console.error('PostPage: failed to fetch post content from Notion', error);
+    console.error('PostPage: failed to fetch post content', error);
     return <LoadErrorFallback />;
   }
 
@@ -152,7 +159,7 @@ export default async function PostPage({
             blurDataURL={post.blurUrl}
           />
         </div>
-        <NotionBlocksRenderer blocks={blocks as any} />
+        <NotionBlocksRenderer blocks={blocks} />
       </article>
       <CommentSection slug={slug} />
       <RelatedPosts posts={relatedPosts} />
@@ -184,7 +191,7 @@ export async function generateMetadata({
         }
       : {};
   } catch (error) {
-    console.error('generateMetadata: failed to fetch posts from Notion', error);
+    console.error('generateMetadata: failed to fetch posts', error);
     return {};
   }
 }
