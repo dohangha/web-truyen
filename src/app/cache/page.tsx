@@ -1,5 +1,7 @@
 import { getAllPostsFromNotion } from '@/services/posts';
 
+export const dynamic = 'force-dynamic';
+
 export default async function CachePage() {
   const allPosts = await getAllPostsFromNotion();
 
