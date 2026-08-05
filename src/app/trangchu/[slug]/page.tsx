@@ -3,12 +3,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import NotionPage from '@/components/notion-page';
+import NotionBlocksRenderer from '@/components/notion-blocks-renderer';
 import CommentSection from '@/components/comment-section';
 import RelatedPosts from '@/components/posts/related-posts';
 import VipLockScreen from '@/components/vip-lock-screen';
 import { getCurrentUser } from '@/libs/auth-helpers';
-import { getRecordMap } from '@/libs/notion';
+import { getPageBlocksV2 } from '@/libs/notion-official';
 import { getAllPostsFromNotion } from '@/services/posts';
 import { Post } from '@/types/post';
 
@@ -60,8 +60,6 @@ export default async function PostPage({
   const isVip = post.access === 'VIP';
 
   if (isVip) {
-    // Chỉ gọi getCurrentUser() (đụng tới cookies()) khi thực sự cần -> truyện
-    // thường không bị ảnh hưởng, vẫn được cache nhanh như cũ.
     const user = await getCurrentUser();
 
     if (!user) {
@@ -129,10 +127,10 @@ export default async function PostPage({
       p.categories.some((v) => post.categories.includes(v))
   );
 
-  let recordMap;
+  let blocks;
 
   try {
-    recordMap = await getRecordMap(post.id);
+    blocks = await getPageBlocksV2(post.id);
   } catch (error) {
     console.error('PostPage: failed to fetch post content from Notion', error);
     return <LoadErrorFallback />;
@@ -154,7 +152,7 @@ export default async function PostPage({
             blurDataURL={post.blurUrl}
           />
         </div>
-        <NotionPage post={post} recordMap={recordMap} />
+        <NotionBlocksRenderer blocks={blocks as any} />
       </article>
       <CommentSection slug={slug} />
       <RelatedPosts posts={relatedPosts} />
