@@ -4,6 +4,8 @@ import { getAllPostsFromNotion } from '@/services/posts';
 
 const SITE_URL = process.env.SITE_URL || 'https://dohangha.com';
 
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const allPosts = await getAllPostsFromNotion();
   const publishedPosts = allPosts.filter((post) => post.published);
