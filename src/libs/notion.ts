@@ -5,8 +5,34 @@ const notion = new NotionAPI({
   authToken: process.env.NOTION_AUTH_TOKEN,
 });
 
-export function getRecordMap(id: string) {
-  return notion.getPage(id);
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function getRecordMap(id: string, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await notion.getPage(id);
+    } catch (error) {
+      const isLastAttempt = attempt === retries;
+
+      console.error(
+        `getRecordMap failed for "${id}" (attempt ${attempt}/${retries})`,
+        error
+      );
+
+      if (isLastAttempt) {
+        throw error;
+      }
+
+      // Chờ tăng dần trước khi thử lại: 1s, 2s, 3s...
+      // giúp tránh bị Notion rate-limit khi build nhiều trang cùng lúc.
+      await delay(attempt * 1000);
+    }
+  }
+
+  // Về lý thuyết không bao giờ tới đây vì đã throw ở lần cuối
+  throw new Error(`getRecordMap: exhausted retries for "${id}"`);
 }
 
 export function mapImageUrl(url: string, block: Block): string | null {
