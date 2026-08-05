@@ -12,14 +12,30 @@ import { getRecordMap } from '@/libs/notion';
 import { getAllPostsFromNotion } from '@/services/posts';
 import { Post } from '@/types/post';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
+
+function LoadErrorFallback() {
+  return (
+    <div className="mx-auto mt-40 text-center">
+      <h2 className="mb-4 text-3xl font-bold">Không thể tải dữ liệu lúc này</h2>
+      <p className="text-secondary">Vui lòng thử tải lại trang sau ít phút.</p>
+    </div>
+  );
+}
 
 export default async function PostPage({
   params: { slug },
 }: {
   params: { slug: string };
 }) {
-  const allPosts = await getAllPostsFromNotion();
+  let allPosts;
+
+  try {
+    allPosts = await getAllPostsFromNotion();
+  } catch (error) {
+    console.error('PostPage: failed to fetch posts from Notion', error);
+    return <LoadErrorFallback />;
+  }
 
   const post = allPosts.find((p) => p.slug === slug);
   if (!post) {
@@ -113,7 +129,14 @@ export default async function PostPage({
       p.categories.some((v) => post.categories.includes(v))
   );
 
-  const recordMap = await getRecordMap(post.id);
+  let recordMap;
+
+  try {
+    recordMap = await getRecordMap(post.id);
+  } catch (error) {
+    console.error('PostPage: failed to fetch post content from Notion', error);
+    return <LoadErrorFallback />;
+  }
 
   return (
     <>
@@ -144,21 +167,26 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const allPosts = await getAllPostsFromNotion();
-  const post = allPosts.find((p) => p.slug === slug);
+  try {
+    const allPosts = await getAllPostsFromNotion();
+    const post = allPosts.find((p) => p.slug === slug);
 
-  return post
-    ? {
-        title: post.title,
-        openGraph: {
-          images: [
-            {
-              url: post.cover,
-              width: 400,
-              height: 300,
-            },
-          ],
-        },
-      }
-    : {};
+    return post
+      ? {
+          title: post.title,
+          openGraph: {
+            images: [
+              {
+                url: post.cover,
+                width: 400,
+                height: 300,
+              },
+            ],
+          },
+        }
+      : {};
+  } catch (error) {
+    console.error('generateMetadata: failed to fetch posts from Notion', error);
+    return {};
+  }
 }

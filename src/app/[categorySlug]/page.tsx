@@ -14,7 +14,6 @@ const CATEGORY_MAP: Record<string, string> = {
   ngontinh: 'Ngôn Tình',
 };
 
-// Cache dữ liệu Notion trong 1 giờ, đồng bộ với /trangchu
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
@@ -43,7 +42,24 @@ export default async function CategoryPage({
     notFound();
   }
 
-  const allPosts = await getAllPostsFromNotion();
+  let allPosts;
+
+  try {
+    allPosts = await getAllPostsFromNotion();
+  } catch (error) {
+    console.error('CategoryPage: failed to fetch posts from Notion', error);
+
+    return (
+      <div className="mx-auto mt-40 text-center">
+        <h2 className="mb-4 text-3xl font-bold">
+          Không thể tải dữ liệu lúc này
+        </h2>
+        <p className="text-secondary">
+          Vui lòng thử tải lại trang sau ít phút.
+        </p>
+      </div>
+    );
+  }
 
   const allCategories = toUniqueArray(
     allPosts
