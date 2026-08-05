@@ -15,11 +15,7 @@ const CATEGORY_MAP: Record<string, string> = {
 };
 
 // Cache dữ liệu Notion trong 1 giờ, đồng bộ với /trangchu
-export const revalidate = 3600;
-
-export async function generateStaticParams() {
-  return Object.keys(CATEGORY_MAP).map((categorySlug) => ({ categorySlug }));
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
   params,
