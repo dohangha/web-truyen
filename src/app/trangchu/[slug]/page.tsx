@@ -14,6 +14,8 @@ import { Post } from '@/types/post';
 
 export const dynamic = 'force-dynamic';
 
+const SITE_URL = process.env.SITE_URL || 'https://dohangha.com';
+
 function LoadErrorFallback() {
   return (
     <div className="mx-auto mt-40 text-center">
@@ -21,6 +23,39 @@ function LoadErrorFallback() {
       <p className="text-secondary">Vui lòng thử tải lại trang sau ít phút.</p>
     </div>
   );
+}
+
+// Trích đoạn văn mở đầu từ nội dung truyện (blocks) để làm mô tả SEO tự
+// động cho từng trang -> mỗi truyện có description riêng biệt, không trùng
+// lặp, giúp Google hiển thị đoạn trích hấp dẫn thay vì tự chọn ngẫu nhiên.
+function extractDescription(blocks: any[], categories: string[]): string {
+  const genrePrefix =
+    categories && categories.length > 0
+      ? `Truyện ${categories.join(', ')}. `
+      : '';
+
+  for (const block of blocks || []) {
+    if (
+      block.type === 'paragraph' &&
+      block.paragraph?.rich_text?.length > 0
+    ) {
+      const text = block.paragraph.rich_text
+        .map((t: any) => t.plain_text)
+        .join('')
+        .trim();
+
+      if (text.length > 0) {
+        const combined = `${genrePrefix}${text}`;
+        return combined.length > 160
+          ? combined.slice(0, 157) + '...'
+          : combined;
+      }
+    }
+  }
+
+  return genrePrefix
+    ? `${genrePrefix}Đọc truyện online miễn phí, cập nhật liên tục.`
+    : 'Đọc truyện online miễn phí, cập nhật liên tục.';
 }
 
 export default async function PostPage({
@@ -176,20 +211,46 @@ export async function generateMetadata({
     const allPosts = await getAllPostsFromNotion();
     const post = allPosts.find((p) => p.slug === slug);
 
-    return post
-      ? {
-          title: post.title,
-          openGraph: {
-            images: [
-              {
-                url: post.cover,
-                width: 400,
-                height: 300,
-              },
-            ],
+    if (!post) return {};
+
+    let description = 'Đọc truyện online miễn phí, cập nhật liên tục.';
+
+    try {
+      const { data } = await supabase
+        .from('posts')
+        .select('content')
+        .eq('id', post.id)
+        .single();
+
+      if (data?.content) {
+        description = extractDescription(data.content, post.categories);
+      }
+    } catch (err) {
+      console.error('generateMetadata: failed to fetch content for description', err);
+    }
+
+    const title = `${post.title} - Đọc Truyện Online | Web Truyện`;
+    const url = `${SITE_URL}/trangchu/${post.slug}`;
+
+    return {
+      title,
+      description,
+      alternates: {
+        canonical: url,
+      },
+      openGraph: {
+        title,
+        description,
+        url,
+        images: [
+          {
+            url: post.cover,
+            width: 400,
+            height: 300,
           },
-        }
-      : {};
+        ],
+      },
+    };
   } catch (error) {
     console.error('generateMetadata: failed to fetch posts', error);
     return {};

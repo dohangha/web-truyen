@@ -1,3 +1,4 @@
+import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import CategoryFilter from '@/components/filter/category-filter';
@@ -14,20 +15,36 @@ const CATEGORY_MAP: Record<string, string> = {
   ngontinh: 'Ngôn Tình',
 };
 
+const SITE_URL = process.env.SITE_URL || 'https://dohangha.com';
+
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
   params,
 }: {
   params: { categorySlug: string };
-}) {
+}): Promise<Metadata> {
   const categoryName = CATEGORY_MAP[params.categorySlug];
 
+  if (!categoryName) {
+    return { title: 'Không tìm thấy' };
+  }
+
+  const title = `Truyện ${categoryName} Hay Nhất - Đọc Online Miễn Phí | Web Truyện`;
+  const description = `Tổng hợp truyện ${categoryName} hay nhất, cập nhật liên tục, đọc online miễn phí trên mọi thiết bị. Kho truyện ${categoryName} đa dạng, đầy đủ thể loại.`;
+  const url = `${SITE_URL}/${params.categorySlug}`;
+
   return {
-    title: categoryName ?? 'Không tìm thấy',
-    description: categoryName
-      ? `Danh sách truyện thể loại ${categoryName}.`
-      : undefined,
+    title,
+    description,
+    alternates: {
+      canonical: url,
+    },
+    openGraph: {
+      title,
+      description,
+      url,
+    },
   };
 }
 
