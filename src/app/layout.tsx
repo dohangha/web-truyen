@@ -3,6 +3,7 @@ import 'prismjs/themes/prism-tomorrow.css';
 import 'react-notion-x/src/styles.css';
 
 import { Metadata } from 'next';
+import Script from 'next/script';
 
 import Header from '@/components/header/header';
 import Footer from '@/components/footer';
@@ -68,6 +69,20 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="text-primary bg-primary relative mx-auto mb-20 flex w-full max-w-screen-xl flex-col px-[10vw] md:px-[5vw]">
+        {/* Google Analytics (GA4) */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-ESYV6KZFHW"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-ESYV6KZFHW');
+          `}
+        </Script>
+
         <Provider>
           <FavoritesProvider>
             <Header />
