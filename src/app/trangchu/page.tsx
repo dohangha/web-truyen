@@ -7,7 +7,7 @@ import { getAllPostsFromNotion } from '@/services/posts';
 import { toUniqueArray } from '@/utils/to-unique-array';
 
 export const metadata = {
-  title: 'Web Truyện - Đọc Truyện Online Miễn Phí | Ngôn Tình, Trinh Thám, Cổ Đại',
+  title: 'Đọc Truyện Online Miễn Phí | Ngôn Tình, Trinh Thám, Cổ Đại',
   description:
     'Đọc truyện online miễn phí mỗi ngày: ngôn tình, trinh thám, cổ đại, hiện đại. Cập nhật truyện mới liên tục, giao diện đẹp, đọc mượt trên mọi thiết bị.',
 };

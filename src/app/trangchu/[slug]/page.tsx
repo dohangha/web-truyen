@@ -229,7 +229,7 @@ export async function generateMetadata({
       console.error('generateMetadata: failed to fetch content for description', err);
     }
 
-    const title = `${post.title} - Đọc Truyện Online | Web Truyện`;
+    const title = `${post.title} - Đọc Truyện Online`;
     const url = `${SITE_URL}/trangchu/${post.slug}`;
 
     return {

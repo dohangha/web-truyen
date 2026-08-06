@@ -30,7 +30,7 @@ export async function generateMetadata({
     return { title: 'Không tìm thấy' };
   }
 
-  const title = `Truyện ${categoryName} Hay Nhất - Đọc Online Miễn Phí | Web Truyện`;
+  const title = `Truyện ${categoryName} Hay Nhất - Đọc Online Miễn Phí`;
   const description = `Tổng hợp truyện ${categoryName} hay nhất, cập nhật liên tục, đọc online miễn phí trên mọi thiết bị. Kho truyện ${categoryName} đa dạng, đầy đủ thể loại.`;
   const url = `${SITE_URL}/${params.categorySlug}`;
 
